@@ -1,0 +1,21 @@
+{
+  "name": "mobile-robotic-irrigation-monitor",
+  "version": "1.0.0",
+  "description": "Mobile Robotic Irrigation Monitoring System using soil-moisture and ambient-temperature sensors (ESP32 + Node.js/Express + React + MySQL)",
+  "private": true,
+  "scripts": {
+    "setup": "npm install && npm install --prefix server && npm install --prefix client",
+    "db:init": "npm run db:init --prefix server",
+    "dev": "concurrently -k -n api,web -c green,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "simulate": "npm run simulate --prefix server",
+    "simulate:auto": "npm run simulate --prefix server -- --auto",
+    "test": "npm test --prefix server",
+    "typecheck": "npm run typecheck --prefix server && npx --prefix client tsc --noEmit -p client",
+    "build": "npm run build --prefix client",
+    "start": "npm start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "license": "MIT"
+}
