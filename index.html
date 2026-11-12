@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#1f5130" />
+<title>Mobile Robotic Irrigation Monitor - Web Prototype</title>
+<style>
+:root {
+  --green-900:#163d24; --green-700:#1f5130; --green-500:#2f7d4a; --green-100:#e7f2ea;
+  --ink:#1b2420; --muted:#5f6b65; --line:#dde3df; --bg:#f4f6f3; --card:#fff;
+  --dry:#b4531a; --dry-bg:#fbeee3; --normal:#2f7d4a; --normal-bg:#e5f3e9; --wet:#1f5f9e; --wet-bg:#e4eef8;
+  --radius:10px;
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+  color:var(--ink); background:var(--bg);
+}
+*{box-sizing:border-box}
+body{margin:0}
+h1{font-size:1.35rem;margin:0 0 4px}
+h2{font-size:1.02rem;margin:0 0 10px}
+.muted{color:var(--muted)} .small{font-size:.88rem} .tiny{font-size:.78rem;margin:4px 0 0}
+.warn{color:var(--dry);font-weight:600}
+.error{color:#a12a1f;background:#fdecea;padding:8px 10px;border-radius:8px;font-size:.9rem}
+.note{color:var(--green-700)}
+.hidden{display:none!important}
+.proto-bar{background:#fff7e0;border-bottom:1px solid #ecd9a3;color:#6b5312;font-size:.82rem;padding:6px 16px;text-align:center}
+.app{min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--green-700);color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;gap:10px;align-items:center}
+.brand small{display:block;opacity:.8;font-size:.75rem}
+.brand-mark{font-size:1.8rem;line-height:1;color:#9fd8ae}
+.user{display:flex;align-items:center;gap:12px;font-size:.9rem}
+.role{font-style:normal;font-size:.72rem;padding:2px 8px;border-radius:99px;margin-left:6px;background:rgba(255,255,255,.18)}
+.tabs{display:flex;gap:4px;padding:0 16px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{border:0;background:none;padding:12px 14px;font-size:.92rem;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab.active{color:var(--green-700);border-bottom-color:var(--green-500);font-weight:600}
+.content{padding:18px 20px 28px;max-width:1180px;width:100%;margin:0 auto;display:grid;gap:16px}
+.footer{text-align:center;font-size:.75rem;color:var(--muted);padding:12px}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.grid-2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}
+.grid-2.wide-left{grid-template-columns:1.6fr 1fr}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.card-head h2{margin:0}
+.badge{font-size:.74rem;font-weight:700;padding:3px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:.03em}
+.badge-dry{color:var(--dry);background:var(--dry-bg)} .badge-normal{color:var(--normal);background:var(--normal-bg)}
+.badge-wet{color:var(--wet);background:var(--wet-bg)} .badge-none{color:var(--muted);background:#eef0ee}
+.banner{margin:14px 0 0;padding:12px 14px;border-radius:8px;font-weight:700;font-size:1.02rem}
+.banner-dry{background:var(--dry-bg);color:var(--dry);border-left:5px solid var(--dry)}
+.banner-normal{background:var(--normal-bg);color:var(--normal);border-left:5px solid var(--normal)}
+.banner-wet{background:var(--wet-bg);color:var(--wet);border-left:5px solid var(--wet)}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+.metric{display:flex;flex-direction:column;gap:4px}
+.metric-label{font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.metric-value{font-size:2.2rem;font-weight:700;line-height:1.1}
+.metric-value small{font-size:1rem;color:var(--muted);margin-left:2px}
+.gauge{position:relative;height:10px;background:#edf0ed;border-radius:99px;overflow:hidden;margin-top:4px}
+.gauge-fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;transition:width .6s}
+.fill-dry{background:var(--dry)} .fill-normal{background:var(--normal)} .fill-wet{background:var(--wet)}
+.gauge-mark{position:absolute;top:0;bottom:0;width:2px;background:#9aa59f;z-index:1}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.dot-idle{background:var(--green-500)} .dot-moving,.dot-sampling{background:#d39b1c} .dot-offline{background:#a0a7a3}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin:6px 0 12px}
+.facts dt{font-size:.74rem;color:var(--muted);text-transform:uppercase}
+.facts dd{margin:0;font-size:.9rem}
+.control{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:8px}
+.control label{font-size:.82rem;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row select{flex:1;min-width:160px}
+.field{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.plot{border:1px solid var(--line);border-radius:8px;padding:10px;border-top:5px solid #c9cfcb}
+.plot header{display:flex;justify-content:space-between;align-items:center}
+.plot-dry{border-top-color:var(--dry);background:#fffaf6} .plot-normal{border-top-color:var(--normal)}
+.plot-wet{border-top-color:var(--wet);background:#f8fbfe}
+.plot-label{margin:4px 0;font-size:.85rem;color:var(--muted)}
+.plot-values{display:flex;justify-content:space-between;font-size:1.2rem;font-weight:700;margin:4px 0}
+.chart{width:100%;height:auto}
+.chart .grid{stroke:#e6ebe7} .chart .axis{font-size:11px;fill:var(--muted)}
+.chart .zone-dry{fill:var(--dry-bg);opacity:.8} .chart .zone-wet{fill:var(--wet-bg);opacity:.8}
+.chart .line-m{fill:none;stroke:var(--green-700);stroke-width:2.5}
+.chart .line-t{fill:none;stroke:#c27c0e;stroke-width:2;stroke-dasharray:6 4}
+.chart .pt-dry{fill:var(--dry)} .chart .pt-normal{fill:var(--normal)} .chart .pt-wet{fill:var(--wet)}
+.legend{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.key{display:inline-block;width:18px;height:3px} .key-m{background:var(--green-700)}
+.key-t{background:repeating-linear-gradient(90deg,#c27c0e 0 6px,transparent 6px 10px);margin-left:10px}
+.table-wrap{overflow-x:auto} .table-wrap.short{max-height:320px;overflow-y:auto}
+table.history{width:100%;border-collapse:collapse;font-size:.88rem}
+table.history th{text-align:left;font-size:.75rem;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--line);padding:8px}
+table.history td{border-bottom:1px solid var(--line);padding:8px;vertical-align:middle}
+td.actions{white-space:nowrap;display:flex;gap:6px}
+input,select{font:inherit;padding:9px 10px;border:1px solid #c8d0cb;border-radius:8px;background:#fff;width:100%}
+.row select,.inline-form select{width:auto}
+.form{display:grid;gap:10px;align-content:start}
+.form label{display:grid;gap:4px;font-size:.85rem;color:var(--muted)}
+.inline-form{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:12px}
+.btn{font:inherit;font-size:.9rem;padding:9px 14px;border-radius:8px;border:1px solid #c8d0cb;background:#fff;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn-primary{background:var(--green-500);border-color:var(--green-500);color:#fff;font-weight:600}
+.btn-primary:hover{background:var(--green-700)}
+.btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.btn-small{padding:5px 10px;font-size:.8rem}
+.btn-danger{color:#a12a1f;border-color:#e5b8b3}
+.btn-block{width:100%}
+.btn-water{color:var(--wet);border-color:#b9cfe6}
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(160deg,var(--green-700),var(--green-900))}
+.login{width:100%;max-width:380px;display:grid;gap:8px}
+.login label{font-size:.85rem;color:var(--muted)}
+.brand-login{color:var(--green-700);margin-bottom:8px} .brand-login small{color:var(--muted)}
+/* prototype-only: field animation, process log, network switch */
+.sim svg{width:100%;height:auto;display:block}
+.sim .soil{fill:#d8c3a5} .sim .path{fill:#efe6d6}
+.sim .bed-dry{fill:#e2b48f} .sim .bed-normal{fill:#a9d3b3} .sim .bed-wet{fill:#9fc0e3} .sim .bed-none{fill:#d5d9d6}
+.sim text{font-size:12px;fill:#1b2420}
+.sim .robot{transition:transform 1.2s ease-in-out}
+.sim .probe{transition:transform .45s ease}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:.84rem;max-height:260px;overflow-y:auto}
+.steps li{padding:6px 8px;border-radius:6px;background:#f6f8f6;border-left:3px solid #c9cfcb}
+.steps li.robot{border-left-color:#d39b1c} .steps li.server{border-left-color:var(--green-500)}
+.steps li.dash{border-left-color:var(--wet)} .steps li.warn{border-left-color:var(--dry);background:#fff6ef}
+.steps time{color:var(--muted);font-size:.74rem;margin-right:6px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer;user-select:none}
+.switch input{width:auto}
+.pill{font-size:.72rem;padding:2px 8px;border-radius:99px;background:#eef0ee;color:var(--muted)}
+.pill-on{background:var(--normal-bg);color:var(--normal)} .pill-off{background:#fdecea;color:#a12a1f}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;counter-reset:s}
+.how div{border:1px solid var(--line);border-radius:8px;padding:10px;font-size:.86rem;background:#fbfcfb}
+.how div::before{counter-increment:s;content:counter(s);display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--green-500);color:#fff;font-size:.78rem;font-weight:700;margin-right:6px}
+@media (max-width:760px){
+  .grid-2,.grid-2.wide-left{grid-template-columns:1fr}
+  .content{padding:12px} .metric-value{font-size:1.8rem} .user span{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ====================== LOGIN ====================== -->
+<div id="loginView" class="login-wrap">
+  <form class="card login" id="loginForm">
+    <div class="brand brand-login">
+      <span class="brand-mark">&#9673;</span>
+      <div><strong>Irrigation Monitor</strong><small>Mobile robotic irrigation monitoring system</small></div>
+    </div>
+    <h1>Sign in</h1>
+    <label for="username">Username</label>
+    <input id="username" autocomplete="username" required />
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required />
+    <p id="loginError" class="error hidden"></p>
+    <button class="btn btn-primary btn-block">Sign in</button>
+    <p class="tiny muted">Web prototype. Use <b>farmer / Farmer@123</b> or <b>admin / Admin@123</b>.</p>
+    <div class="row">
+      <button type="button" class="btn btn-small" data-quick="farmer">Sign in as farmer</button>
+      <button type="button" class="btn btn-small" data-quick="admin">Sign in as administrator</button>
+    </div>
+  </form>
+</div>
+
+<!-- ====================== APP ====================== -->
+<div id="appView" class="app hidden">
+  <div class="proto-bar">Web prototype: the robot, server and database are simulated in your browser to show how the system works. No hardware is needed.</div>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">&#9673;</span>
+      <div><strong>Irrigation Monitor</strong><small>Mobile robotic soil-moisture &amp; temperature monitoring</small></div>
+    </div>
+    <div class="user">
+      <span><span id="userName"></span> <em id="userRole" class="role"></em></span>
+      <button class="btn btn-ghost" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-page="dashboard">Dashboard</button>
+    <button class="tab" data-page="history">History</button>
+    <button class="tab" data-page="points">Sampling Points</button>
+    <button class="tab" data-page="settings">Settings</button>
+    <button class="tab" data-page="how">How It Works</button>
+  </nav>
+
+  <main class="content">
+    <!-- ---------- DASHBOARD ---------- -->
+    <section id="page-dashboard" class="page">
+      <div class="page-head" style="margin-bottom:16px">
+        <div><h1 id="greeting"></h1><p class="muted small" id="summaryLine"></p></div>
+        <span class="muted tiny" id="updatedLine"></span>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:16px">
+        <section class="card live" id="livePanel"></section>
+        <section class="card robot">
+          <div class="card-head"><h2>Robot</h2><span id="robotDot" class="dot dot-idle"></span></div>
+          <dl class="facts" id="robotFacts"></dl>
+          <div class="control">
+            <label for="target">Send robot to</label>
+            <div class="row">
+              <select id="target"></select>
+              <button class="btn btn-primary" id="goBtn">Go</button>
+            </div>
+            <div class="row">
+              <button class="btn" id="stopBtn">Stop</button>
+              <button class="btn" id="returnBtn">Return to start</button>
+              <button class="btn" id="sweepBtn" title="Visit every point in turn">Sample all points</button>
+            </div>
+            <p class="small note" id="robotMsg"></p>
+          </div>
+        </section>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:16px">
+        <section class="card sim">
+          <div class="card-head">
+            <h2>Field view (simulation)</h2>
+            <label class="switch"><input type="checkbox" id="wifiToggle" checked /> Field Wi-Fi <span id="wifiPill" class="pill pill-on">connected</span></label>
+          </div>
+          <div id="fieldSvg"></div>
+          <p class="tiny muted">Beds are coloured by their latest reading. Use <b>Water</b> on a field card to simulate irrigating a point, then sample it again. Switch Wi-Fi off and click <b>Sample all points</b> to see readings buffered on the robot, then switch it on again.</p>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>What is happening</h2><button class="btn btn-small" id="clearLog">Clear</button></div>
+          <ul class="steps" id="stepLog"></ul>
+        </section>
+      </div>
+
+      <section class="card" style="margin-bottom:16px">
+        <div class="card-head"><h2>Field overview</h2><span class="muted small">Newest reading at each sampling point</span></div>
+        <div class="field" id="fieldCards"></div>
+      </section>
+
+      <section class="card" id="chartCard"></section>
+    </section>
+
+    <!-- ---------- HISTORY ---------- -->
+    <section id="page-history" class="page hidden">
+      <section class="card">
+        <div class="card-head">
+          <h2>Reading history</h2>
+          <div class="row">
+            <select id="histPoint" aria-label="Filter by point"></select>
+            <select id="histLimit" aria-label="Rows">
+              <option value="50">Last 50</option><option value="100" selected>Last 100</option><option value="500">Last 500</option>
+            </select>
+            <button class="btn" id="csvBtn">Download CSV</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="history">
+            <thead><tr><th>#</th><th>Point</th><th>Moisture</th><th>Temp.</th><th>Status</th><th>Recommendation</th><th>Time</th></tr></thead>
+            <tbody id="histBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- ---------- POINTS ---------- -->
+    <section id="page-points" class="page hidden">
+      <div class="grid-2 wide-left">
+        <section class="card">
+          <h2>Sampling points on the plot</h2>
+          <div class="table-wrap">
+            <table class="history">
+              <thead><tr><th>No.</th><th>Label</th><th>Distance</th><th>Crop</th><th>Notes</th><th class="admin-only"></th></tr></thead>
+              <tbody id="pointsBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <form class="card form admin-only" id="pointForm">
+          <h2 id="pointFormTitle">Add a sampling point</h2>
+          <label>Point number<input type="number" min="1" max="12" id="pIndex" required /></label>
+          <label>Label<input id="pLabel" maxlength="60" required /></label>
+          <label>Distance from start (m)<input type="number" step="0.01" min="0" id="pDist" /></label>
+          <label>Crop<input id="pCrop" maxlength="60" /></label>
+          <label>Notes<input id="pNotes" maxlength="255" /></label>
+          <p class="small note" id="pointMsg"></p>
+          <div class="row">
+            <button class="btn btn-primary" id="pointSave">Add point</button>
+            <button type="button" class="btn hidden" id="pointCancel">Cancel</button>
+          </div>
+        </form>
+        <section class="card farmer-only">
+          <h2>About sampling points</h2>
+          <p class="muted">Sampling points are the fixed places on the plot where the robot lowers its probe. Only the administrator can add or change them.</p>
+        </section>
+      </div>
+    </section>
+
+    <!-- ---------- SETTINGS ---------- -->
+    <section id="page-settings" class="page hidden">
+      <div class="grid-2" style="margin-bottom:16px">
+        <form class="card form" id="thrForm">
+          <h2>Decision thresholds</h2>
+          <label>Dry when moisture is below (%)<input type="number" step="0.5" id="tDry" /></label>
+          <label>Wet when moisture is above (%)<input type="number" step="0.5" id="tWet" /></label>
+          <label>High-temperature advisory above (&deg;C)<input type="number" step="0.5" id="tHot" /></label>
+          <p class="tiny muted">Sensor calibration: dry air = 3000, water = 1200 (12-bit ADC).</p>
+          <p class="small note" id="thrMsg"></p>
+          <button class="btn btn-primary admin-only">Save thresholds</button>
+        </form>
+        <form class="card form" id="pwForm">
+          <h2>My password</h2>
+          <label>Current password<input type="password" id="pwCur" required /></label>
+          <label>New password<input type="password" id="pwNew" required /></label>
+          <p class="small note" id="pwMsg"></p>
+          <button class="btn btn-primary">Change password</button>
+        </form>
+      </div>
+      <section class="card admin-only" style="margin-bottom:16px">
+        <h2>User accounts</h2>
+        <div class="table-wrap">
+          <table class="history"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="usersBody"></tbody></table>
+        </div>
+        <form class="form inline-form" id="userForm">
+          <input placeholder="Full name" id="uName" required />
+          <input placeholder="Username" id="uUser" required />
+          <input placeholder="Password" type="password" id="uPass" required />
+          <select id="uRole"><option value="farmer">Farmer</option><option value="admin">Administrator</option></select>
+          <button class="btn btn-primary">Add user</button>
+        </form>
+        <p class="small note" id="userMsg"></p>
+      </section>
+      <section class="card admin-only">
+        <h2>Audit log</h2>
+        <div class="table-wrap short">
+          <table class="history"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Detail</th></tr></thead><tbody id="auditBody"></tbody></table>
+        </div>
+      </section>
+    </section>
+
+    <!-- ---------- HOW IT WORKS ---------- -->
+    <section id="page-how" class="page hidden">
+      <section class="card" style="margin-bottom:16px">
+        <h2>How the system works</h2>
+        <div class="how">
+          <div>The farmer picks a sampling point on the dashboard and clicks <b>Go</b>. The server queues a GOTO command.</div>
+          <div>The ESP32 robot polls the server every 3 seconds, receives the command and the current thresholds, and drives to the point.</div>
+          <div>A servo lowers the capacitive probe into the soil. After 600 ms the robot averages 8 ADC samples and reads the DS18B20 temperature sensor, then raises the probe.</div>
+          <div>The robot converts the raw value to moisture % (3000 = dry air, 1200 = water) and sends it to the server with its device key.</div>
+          <div>The server validates the reading, classifies it as dry, normal or wet with the current thresholds, adds a recommendation and stores it in MySQL.</div>
+          <div>The dashboard refreshes every 5 seconds and shows the reading, the recommendation and the updated field overview.</div>
+          <div>If Wi-Fi is lost, the robot keeps up to 20 readings in a buffer and sends them, marked as buffered, when the connection returns.</div>
+        </div>
+      </section>
+      <div class="grid-2">
+        <section class="card">
+          <h2>Decision rules</h2>
+          <table class="history">
+            <thead><tr><th>Moisture</th><th>Status</th><th>Recommendation</th></tr></thead>
+            <tbody id="rulesBody"></tbody>
+          </table>
+          <p class="tiny muted">Ambient temperature refines the advice but never overrides the soil reading. A wet point is never told to irrigate.</p>
+        </section>
+        <section class="card">
+          <h2>Real system components</h2>
+          <table class="history">
+            <tbody>
+              <tr><td><b>Robot</b></td><td>ESP32 DevKit, capacitive soil-moisture sensor on a servo arm, DS18B20, L298N + 2 DC motors, 7.4 V Li-ion</td></tr>
+              <tr><td><b>Firmware</b></td><td>Arduino C/C++</td></tr>
+              <tr><td><b>Server</b></td><td>Node.js 20, Express, TypeScript</td></tr>
+              <tr><td><b>Database</b></td><td>MySQL 8 (users, devices, sampling_points, readings, thresholds, robot_commands, audit_log)</td></tr>
+              <tr><td><b>Dashboard</b></td><td>React 18 + TypeScript (this prototype reproduces its screens)</td></tr>
+              <tr><td><b>Security</b></td><td>Hashed passwords, signed sessions, roles, device key, input validation, audit log</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </section>
+  </main>
+  <footer class="footer">Mobile Robotic Irrigation Monitoring System &middot; Web prototype &middot; ESP32 + Node.js + React + MySQL</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ============================================================
+   1. SIMULATED DATABASE (in memory)
+   ============================================================ */
+const db = {
+  users: [
+    { id: 1, name: "System Administrator", username: "admin", password: "Admin@123", role: "admin", active: true },
+    { id: 2, name: "Demo Farmer", username: "farmer", password: "Farmer@123", role: "farmer", active: true },
+  ],
+  points: [
+    { index: 1, label: "Bed A - North end", distance: 1.5, crop: "Tomato", notes: "Near the water tap" },
+    { index: 2, label: "Bed A - Middle", distance: 3.0, crop: "Tomato", notes: "" },
+    { index: 3, label: "Bed B - Shaded", distance: 4.5, crop: "Pepper", notes: "Partly shaded after 2 p.m." },
+    { index: 4, label: "Bed B - Open sun", distance: 6.0, crop: "Pepper", notes: "Full sun, dries quickly" },
+    { index: 5, label: "Bed C - South end", distance: 7.5, crop: "Okra", notes: "Slight slope" },
+  ],
+  thresholds: { dryBelow: 30, wetAbove: 60, hotAbove: 35, adcDryRaw: 3000, adcWetRaw: 1200 },
+  readings: [],
+  audit: [],
+  nextReadingId: 1,
+};
+
+// Hidden "true" soil state of each point (what the probe would measure).
+const soil = {
+  1: { moisture: 52, dryRate: 0.6, temp: 29 },
+  2: { moisture: 41, dryRate: 0.8, temp: 30 },
+  3: { moisture: 66, dryRate: 0.4, temp: 27 },
+  4: { moisture: 27, dryRate: 1.2, temp: 34 },
+  5: { moisture: 36, dryRate: 0.9, temp: 31 },
+};
+
+/* ============================================================
+   2. DECISION RULES  (same as server/src/lib/decision.ts)
+   ============================================================ */
+const RECOMMENDATION = { dry: "Irrigation needed", normal: "Condition satisfactory", wet: "No irrigation required" };
+function rawToMoisturePercent(raw, t = db.thresholds) {
+  const pct = ((t.adcDryRaw - raw) / (t.adcDryRaw - t.adcWetRaw)) * 100;
+  return Math.round(Math.min(100, Math.max(0, pct)) * 10) / 10;
+}
+function classify(m, t = db.thresholds) { return m < t.dryBelow ? "dry" : m > t.wetAbove ? "wet" : "normal"; }
+function recommend(s, temp, t = db.thresholds) {
+  if (s === "normal" && temp > t.hotAbove) return "Condition satisfactory - re-check soon (high temperature)";
+  if (s === "dry" && temp > t.hotAbove) return "Irrigation needed - urgent (high temperature)";
+  return RECOMMENDATION[s];
+}
+
+/* ============================================================
+   3. SIMULATED SERVER (API)
+   ============================================================ */
+const server = {
+  commands: [],
+  robot: { name: "robot-01", state: "idle", point: 0, battery: 7.82, lastSeen: new Date() },
+  receiveReading(r) {                       // POST /api/readings
+    if (!db.points.some(p => p.index === r.point)) return { code: 400, error: "point not registered" };
+    if (r.temperature < -55 || r.temperature > 125) return { code: 400, error: "temperature out of range (sensor fault?)" };
+    const status = classify(r.moisture);
+    const rec = {
+      id: db.nextReadingId++, point: r.point, moisture: r.moisture, temperature: r.temperature, raw: r.raw,
+      status, recommendation: recommend(status, r.temperature), buffered: !!r.buffered,
+      time: r.time || new Date(),
+    };
+    db.readings.unshift(rec);
+    return { code: 200, status, recommendation: rec.recommendation, id: rec.id };
+  },
+  queue(cmd, target) {                      // POST /api/robot/commands
+    this.commands.forEach(c => { if (c.status === "pending") c.status = "cancelled"; });
+    const c = { id: Date.now(), cmd, target, status: "pending" };
+    this.commands.push(c);
+    audit("ROBOT_COMMAND", `${cmd}${target ? " " + target : ""}`);
+    return c;
+  },
+  nextCommand() {                           // GET /api/robot/next-command
+    const c = this.commands.find(x => x.status === "pending");
+    if (c) c.status = "sent";
+    return c || null;
+  },
+};
+
+function audit(action, detail) {
+  db.audit.unshift({ time: new Date(), user: session.user ? session.user.name : null, action, detail });
+}
+
+/* ============================================================
+   4. SIMULATED ROBOT (same loop as the ESP32 firmware)
+   ============================================================ */
+const robot = {
+  busy: false, wifi: true, buffer: [], MAX_BUFFER: 20, stopRequested: false, sweepQueue: [],
+  async run(cmd) {
+    this.busy = true;
+    if (cmd.cmd === "GOTO") await this.visit(cmd.target);
+    else if (cmd.cmd === "RETURN") { await this.drive(0); log("robot", "Returned to the start line."); }
+    else if (cmd.cmd === "STOP") log("robot", "Motors stopped.");
+    cmd.status = "done";
+    this.busy = false;
+    setState("idle");
+    if (this.sweepQueue.length && !this.stopRequested) {
+      const n = this.sweepQueue.shift();
+      server.queue("GOTO", n);
+    } else if (this.stopRequested) { this.sweepQueue = []; this.stopRequested = false; }
+  },
+  async drive(target) {
+    setState("moving");
+    animateRobotTo(target);
+    await sleep(1300);
+    server.robot.point = target;
+  },
+  async visit(n) {
+    log("robot", `Command received: GOTO point ${n}. Driving ${Math.abs(n - server.robot.point)} segment(s).`);
+    await this.drive(n);
+    if (this.stopRequested) { log("robot", "Stopped before sampling."); return; }
+    setState("sampling");
+    animateProbe(true);
+    log("robot", "Probe lowered into the soil. Waiting 600 ms to settle.");
+    await sleep(800);
+    const s = soil[n] || { moisture: 45, temp: 30 };
+    let sum = 0;
+    for (let i = 0; i < 8; i++) {
+      const pct = s.moisture + (Math.random() - 0.5) * 3;
+      sum += Math.round(db.thresholds.adcDryRaw - (pct / 100) * (db.thresholds.adcDryRaw - db.thresholds.adcWetRaw));
+    }
+    const raw = Math.round(sum / 8);
+    const moisture = rawToMoisturePercent(raw);
+    const temperature = Math.round((s.temp + (Math.random() - 0.5) * 1.5) * 10) / 10;
+    log("robot", `8 ADC samples averaged: raw ${raw} → ${moisture}% moisture; DS18B20: ${temperature} °C.`);
+    animateProbe(false);
+    await sleep(500);
+    log("robot", "Probe raised. Sending reading to the server…");
+    const reading = { point: n, moisture, temperature, raw, time: new Date() };
+    if (!this.wifi) {
+      if (this.buffer.length >= this.MAX_BUFFER) this.buffer.shift();
+      this.buffer.push(reading);
+      log("warn", `Wi-Fi unavailable: reading stored in the robot's buffer (${this.buffer.length}/${this.MAX_BUFFER}).`);
+      return;
+    }
+    this.transmit(reading, false);
+  },
+  transmit(r, buffered) {
+    const res = server.receiveReading({ ...r, buffered });
+    if (res.code === 200) {
+      log("server", `Server: reading #${res.id} validated and stored → ${res.status.toUpperCase()}: "${res.recommendation}"${buffered ? " (buffered)" : ""}.`);
+      setTimeout(() => { renderAll(); log("dash", "Dashboard refreshed with the new reading."); }, 400);
+    } else log("warn", `Server rejected the reading: ${res.error}.`);
+  },
+  flush() {
+    if (!this.wifi || !this.buffer.length) return;
+    log("robot", `Wi-Fi back: sending ${this.buffer.length} buffered reading(s).`);
+    while (this.buffer.length) this.transmit(this.buffer.shift(), true);
+  },
+};
+
+// Robot polling loop (every 3 s, like the firmware).
+setInterval(() => {
+  if (!session.user) return;
+  if (robot.wifi) server.robot.lastSeen = new Date();
+  if (robot.busy) return;
+  if (!robot.wifi) return;
+  robot.flush();
+  const cmd = server.nextCommand();
+  if (cmd) robot.run(cmd);
+}, 1500);
+
+// Soil slowly dries; hotter points dry faster. Temperature drifts with "time of day".
+setInterval(() => {
+  Object.values(soil).forEach(s => { s.moisture = Math.max(5, s.moisture - s.dryRate * 0.15); });
+}, 2000);
+
+/* ============================================================
+   5. SESSION & UI HELPERS
+   ============================================================ */
+const session = { user: null };
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (d) => d ? new Date(d).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "-";
+const badge = (s) => s ? `<span class="badge badge-${s}">${{ dry: "Dry", normal: "Normal", wet: "Wet" }[s]}</span>` : `<span class="badge badge-none">No data</span>`;
+const latestFor = (n) => db.readings.find(r => r.point === n);
+const pointLabel = (n) => (db.points.find(p => p.index === n) || {}).label || `Point ${n}`;
+
+function log(kind, text) {
+  const li = document.createElement("li");
+  li.className = kind;
+  li.innerHTML = `<time>${new Date().toLocaleTimeString()}</time>${esc(text)}`;
+  $("stepLog").prepend(li);
+  while ($("stepLog").children.length > 60) $("stepLog").lastChild.remove();
+}
+
+function setState(state) {
+  server.robot.state = robot.wifi ? state : (state === "idle" ? "offline" : state);
+  renderRobot();
+}
+
+/* ============================================================
+   6. RENDERING
+   ============================================================ */
+function renderAll() {
+  renderHeader(); renderLive(); renderRobot(); renderFieldCards(); renderField(); renderChart();
+  renderHistory(); renderPoints(); renderSettings(); renderRules();
+}
+
+function renderHeader() {
+  const u = session.user;
+  $("greeting").textContent = `Good day, ${u.name.split(" ")[0]}`;
+  const dry = db.points.filter(p => (latestFor(p.index) || {}).status === "dry").length;
+  $("summaryLine").textContent = dry ? `${dry} sampling point${dry > 1 ? "s need" : " needs"} irrigation.` : "No sampling point currently needs irrigation.";
+  $("updatedLine").textContent = `Updated ${new Date().toLocaleTimeString()} · refreshes every 5 s`;
+}
+
+function renderLive() {
+  const r = db.readings[0], t = db.thresholds;
+  if (!r) { $("livePanel").innerHTML = `<h2>Latest reading</h2><p class="muted">No readings yet. Send the robot to a sampling point to begin.</p>`; return; }
+  $("livePanel").innerHTML = `
+    <div class="card-head"><h2>Latest reading &middot; Point ${r.point}</h2>${badge(r.status)}</div>
+    <p class="muted small">${esc(pointLabel(r.point))} &middot; ${fmt(r.time)}${r.buffered ? " · sent from robot buffer" : ""}</p>
+    <div class="metrics">
+      <div class="metric"><span class="metric-label">Soil moisture</span>
+        <span class="metric-value">${r.moisture.toFixed(1)}<small>%</small></span>
+        <div class="gauge"><span class="gauge-mark" style="left:${t.dryBelow}%"></span><span class="gauge-mark" style="left:${t.wetAbove}%"></span>
+          <span class="gauge-fill fill-${r.status}" style="width:${r.moisture}%"></span></div>
+        <span class="tiny muted">Dry &lt; ${t.dryBelow}% &middot; Wet &gt; ${t.wetAbove}%</span></div>
+      <div class="metric"><span class="metric-label">Ambient temperature</span>
+        <span class="metric-value">${r.temperature.toFixed(1)}<small>&deg;C</small></span>
+        ${r.temperature > t.hotAbove ? `<span class="tiny warn">Above ${t.hotAbove}&deg;C: soil will dry faster</span>` : ""}</div>
+    </div>
+    <p class="banner banner-${r.status}">${esc(r.recommendation)}</p>`;
+}
+
+const STATE_TEXT = { idle: "Idle - waiting for a command", moving: "Moving to the next point", sampling: "Probe lowered - taking a reading", offline: "Offline - not heard from in 2 minutes" };
+function renderRobot() {
+  const r = server.robot;
+  const pending = server.commands.filter(c => c.status === "pending" || c.status === "sent").slice(-1)[0];
+  $("robotDot").className = `dot dot-${r.state}`;
+  $("robotFacts").innerHTML = `
+    <div><dt>Name</dt><dd>${r.name}</dd></div>
+    <div><dt>State</dt><dd>${STATE_TEXT[r.state]}</dd></div>
+    <div><dt>Last point</dt><dd>${r.point || "Start line"}</dd></div>
+    <div><dt>Battery</dt><dd>${r.battery.toFixed(2)} V</dd></div>
+    <div><dt>Last seen</dt><dd>${fmt(r.lastSeen)}</dd></div>
+    <div><dt>Buffer</dt><dd>${robot.buffer.length} reading(s)</dd></div>
+    <div><dt>Command</dt><dd>${pending ? `${pending.cmd}${pending.target ? " → point " + pending.target : ""} (${pending.status})` : "None"}</dd></div>`;
+}
+
+function renderFieldCards() {
+  $("fieldCards").innerHTML = db.points.map(p => {
+    const r = latestFor(p.index);
+    return `<article class="plot plot-${r ? r.status : "none"}">
+      <header><strong>Point ${p.index}</strong>${badge(r && r.status)}</header>
+      <p class="plot-label">${esc(p.label)}</p>
+      ${r ? `<p class="plot-values"><span>${r.moisture.toFixed(1)}%</span><span>${r.temperature.toFixed(1)}&deg;C</span></p>
+             <p class="tiny">${esc(r.recommendation)}</p><p class="tiny muted">${fmt(r.time)}</p>` : `<p class="tiny muted">Not sampled yet</p>`}
+      <div class="row" style="margin-top:8px">
+        <button class="btn btn-small" data-go="${p.index}">Sample</button>
+        <button class="btn btn-small btn-water" data-water="${p.index}" title="Simulate irrigating this point">Water</button>
+      </div></article>`;
+  }).join("");
+}
+
+// ---------- Animated field (SVG) ----------
+const W = 640, H = 230, X0 = 90, X1 = 580, ROW_Y = 150;
+const xFor = (n) => n === 0 ? 30 : X0 + ((n - 1) / Math.max(1, db.points.length - 1)) * (X1 - X0);
+let robotX = 30, probeDown = false;
+function renderField() {
+  const beds = db.points.map(p => {
+    const r = latestFor(p.index), x = xFor(p.index);
+    return `<g><rect x="${x - 42}" y="30" width="84" height="80" rx="6" class="bed-${r ? r.status : "none"}" stroke="#7d6c55" stroke-width="1"/>
+      ${[0, 1, 2].map(i => `<circle cx="${x - 24 + i * 24}" cy="58" r="7" fill="#3f7d4f"/><circle cx="${x - 24 + i * 24}" cy="84" r="7" fill="#3f7d4f"/>`).join("")}
+      <text x="${x}" y="24" text-anchor="middle" font-weight="700">P${p.index}</text>
+      <text x="${x}" y="126" text-anchor="middle">${r ? r.moisture.toFixed(0) + "%" : "–"}</text>
+      <line x1="${x}" y1="${ROW_Y + 22}" x2="${x}" y2="${ROW_Y + 30}" stroke="#7d6c55" stroke-width="2"/></g>`;
+  }).join("");
+  $("fieldSvg").innerHTML = `
+  <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Animated field with the robot">
+    <rect x="0" y="0" width="${W}" height="${H}" class="soil"/>
+    ${beds}
+    <rect x="10" y="${ROW_Y - 14}" width="${W - 20}" height="44" rx="6" class="path"/>
+    <text x="14" y="${H - 10}" class="muted" font-size="11">Start line</text>
+    <g id="robotG" class="robot" style="transform:translate(${robotX}px, ${ROW_Y}px)">
+      <rect x="-22" y="-10" width="44" height="26" rx="5" fill="#1f5130"/>
+      <circle cx="-14" cy="18" r="6" fill="#222"/><circle cx="14" cy="18" r="6" fill="#222"/>
+      <rect x="-9" y="-6" width="18" height="9" rx="2" fill="#9fd8ae"/>
+      <g id="probeG" class="probe" style="transform:translateY(${probeDown ? 14 : 0}px)">
+        <rect x="16" y="-26" width="4" height="22" fill="#555"/><rect x="14" y="-6" width="8" height="10" fill="#c27c0e"/>
+      </g>
+      ${robot.wifi ? "" : `<text x="0" y="-16" text-anchor="middle" font-size="10" fill="#a12a1f">no Wi-Fi</text>`}
+    </g>
+  </svg>`;
+}
+function animateRobotTo(n) { robotX = xFor(n); const g = $("robotG"); if (g) g.style.transform = `translate(${robotX}px, ${ROW_Y}px)`; }
+function animateProbe(down) { probeDown = down; const g = $("probeG"); if (g) g.style.transform = `translateY(${down ? 14 : 0}px)`; }
+
+// ---------- Trend chart ----------
+function renderChart() {
+  const data = db.readings.slice(0, 30).reverse(), t = db.thresholds;
+  if (data.length < 2) { $("chartCard").innerHTML = `<h2>Moisture and temperature trend</h2><p class="muted">The chart appears after two or more readings.</p>`; return; }
+  const CW = 640, CH = 220, P = { l: 40, r: 44, t: 14, b: 28 }, iw = CW - P.l - P.r, ih = CH - P.t - P.b;
+  const x = i => P.l + (i / (data.length - 1)) * iw, yM = v => P.t + ih - (v / 100) * ih, yT = v => P.t + ih - (Math.min(v, 50) / 50) * ih;
+  const line = f => data.map((r, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${f(r).toFixed(1)}`).join(" ");
+  $("chartCard").innerHTML = `
+    <div class="card-head"><h2>Moisture and temperature trend</h2>
+      <span class="legend"><i class="key key-m"></i> Moisture % <i class="key key-t"></i> Temperature &deg;C</span></div>
+    <svg viewBox="0 0 ${CW} ${CH}" class="chart">
+      ${[0, 25, 50, 75, 100].map(v => `<line x1="${P.l}" x2="${CW - P.r}" y1="${yM(v)}" y2="${yM(v)}" class="grid"/>
+        <text x="${P.l - 6}" y="${yM(v) + 4}" class="axis" text-anchor="end">${v}</text><text x="${CW - P.r + 6}" y="${yM(v) + 4}" class="axis">${v / 2}</text>`).join("")}
+      <rect x="${P.l}" width="${iw}" y="${yM(t.dryBelow)}" height="${yM(0) - yM(t.dryBelow)}" class="zone-dry"/>
+      <rect x="${P.l}" width="${iw}" y="${yM(100)}" height="${yM(t.wetAbove) - yM(100)}" class="zone-wet"/>
+      <path d="${line(r => yT(r.temperature))}" class="line-t"/>
+      <path d="${line(r => yM(r.moisture))}" class="line-m"/>
+      ${data.map((r, i) => `<circle cx="${x(i)}" cy="${yM(r.moisture)}" r="3.5" class="pt-${r.status}"><title>Point ${r.point}: ${r.moisture}% / ${r.temperature}°C</title></circle>`).join("")}
+      <text x="${P.l}" y="${CH - 8}" class="axis">older</text><text x="${CW - P.r}" y="${CH - 8}" class="axis" text-anchor="end">newest</text>
+    </svg>`;
+}
+
+// ---------- History ----------
+function renderHistory() {
+  const sel = $("histPoint"), cur = sel.value;
+  sel.innerHTML = `<option value="0">All points</option>` + db.points.map(p => `<option value="${p.index}">${p.index}. ${esc(p.label)}</option>`).join("");
+  sel.value = cur || "0";
+  const pt = Number(sel.value), lim = Number($("histLimit").value);
+  const rows = db.readings.filter(r => !pt || r.point === pt).slice(0, lim);
+  $("histBody").innerHTML = rows.length ? rows.map(r => `<tr><td>${r.id}</td><td>${r.point}. ${esc(pointLabel(r.point))}</td>
+    <td>${r.moisture.toFixed(1)}%</td><td>${r.temperature.toFixed(1)}&deg;C</td><td>${badge(r.status)}</td>
+    <td>${esc(r.recommendation)}${r.buffered ? ' <span class="tiny muted">(buffered)</span>' : ""}</td><td>${fmt(r.time)}</td></tr>`).join("")
+    : `<tr><td colspan="7" class="muted">No readings found.</td></tr>`;
+}
+
+// ---------- Points ----------
+let editing = null;
+function renderPoints() {
+  const admin = session.user.role === "admin";
+  $("pointsBody").innerHTML = db.points.map(p => `<tr><td>${p.index}</td><td>${esc(p.label)}</td><td>${p.distance} m</td>
+    <td>${esc(p.crop || "-")}</td><td>${esc(p.notes || "-")}</td>
+    ${admin ? `<td class="actions"><button class="btn btn-small" data-edit="${p.index}">Edit</button><button class="btn btn-small btn-danger" data-del="${p.index}">Delete</button></td>` : "<td></td>"}</tr>`).join("");
+  const tgt = $("target"), cur = tgt.value;
+  tgt.innerHTML = `<option value="">Select a sampling point</option>` + db.points.map(p => `<option value="${p.index}">${p.index}. ${esc(p.label)}</option>`).join("");
+  tgt.value = cur;
+}
+
+// ---------- Settings ----------
+function renderSettings() {
+  const t = db.thresholds, admin = session.user.role === "admin";
+  if (document.activeElement && document.activeElement.closest && document.activeElement.closest("#thrForm")) return;
+  $("tDry").value = t.dryBelow; $("tWet").value = t.wetAbove; $("tHot").value = t.hotAbove;
+  ["tDry", "tWet", "tHot"].forEach(id => $(id).disabled = !admin);
+  $("usersBody").innerHTML = db.users.map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td><td>${u.role}</td>
+    <td>${u.active ? "Active" : "Disabled"}</td><td><button class="btn btn-small" data-toggle="${u.id}">${u.active ? "Disable" : "Enable"}</button></td></tr>`).join("");
+  $("auditBody").innerHTML = db.audit.slice(0, 100).map(a => `<tr><td>${fmt(a.time)}</td><td>${esc(a.user || "-")}</td><td>${a.action}</td><td>${esc(a.detail)}</td></tr>`).join("");
+}
+
+function renderRules() {
+  const t = db.thresholds;
+  $("rulesBody").innerHTML = `
+    <tr><td>below ${t.dryBelow}%</td><td>${badge("dry")}</td><td>Irrigation needed<br><span class="tiny muted">above ${t.hotAbove}&deg;C: "urgent (high temperature)"</span></td></tr>
+    <tr><td>${t.dryBelow}% to ${t.wetAbove}%</td><td>${badge("normal")}</td><td>Condition satisfactory<br><span class="tiny muted">above ${t.hotAbove}&deg;C: "re-check soon (high temperature)"</span></td></tr>
+    <tr><td>above ${t.wetAbove}%</td><td>${badge("wet")}</td><td>No irrigation required</td></tr>`;
+}
+
+/* ============================================================
+   7. EVENTS
+   ============================================================ */
+function login(username, password) {
+  const u = db.users.find(x => x.username === username && x.password === password && x.active);
+  if (!u) { $("loginError").textContent = "Incorrect username or password."; $("loginError").classList.remove("hidden"); audit("LOGIN_FAILED", `username=${username}`); return; }
+  session.user = u;
+  audit("LOGIN", "dashboard login");
+  $("loginError").classList.add("hidden");
+  $("loginView").classList.add("hidden");
+  $("appView").classList.remove("hidden");
+  $("userName").textContent = u.name;
+  $("userRole").textContent = u.role === "admin" ? "Administrator" : "Farmer";
+  document.querySelectorAll(".admin-only").forEach(e => e.classList.toggle("hidden", u.role !== "admin"));
+  document.querySelectorAll(".farmer-only").forEach(e => e.classList.toggle("hidden", u.role === "admin"));
+  showPage("dashboard");
+  renderAll();
+  if (!$("stepLog").children.length) log("dash", "Signed in. Pick a point and click Go, or click Sample all points.");
+}
+$("loginForm").addEventListener("submit", e => { e.preventDefault(); login($("username").value.trim(), $("password").value); });
+document.querySelectorAll("[data-quick]").forEach(b => b.addEventListener("click", () => {
+  const u = b.dataset.quick; login(u, u === "admin" ? "Admin@123" : "Farmer@123");
+}));
+$("logoutBtn").addEventListener("click", () => {
+  session.user = null; $("appView").classList.add("hidden"); $("loginView").classList.remove("hidden");
+  $("username").value = ""; $("password").value = "";
+});
+
+function showPage(id) {
+  document.querySelectorAll(".page").forEach(p => p.classList.toggle("hidden", p.id !== "page-" + id));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.page === id));
+}
+$("tabs").addEventListener("click", e => { const b = e.target.closest(".tab"); if (b) { showPage(b.dataset.page); renderAll(); } });
+
+function sendGoto(n) {
+  if (!n) { $("robotMsg").textContent = "Choose a sampling point first."; return; }
+  server.queue("GOTO", Number(n));
+  $("robotMsg").textContent = `Robot sent to point ${n}.`;
+  log("dash", `Dashboard: GOTO point ${n} queued on the server.`);
+  if (!robot.wifi) log("warn", "The robot cannot receive commands until Wi-Fi returns.");
+  renderRobot();
+}
+$("goBtn").addEventListener("click", () => sendGoto($("target").value));
+$("stopBtn").addEventListener("click", () => {
+  robot.stopRequested = robot.busy; robot.sweepQueue = [];
+  server.queue("STOP"); $("robotMsg").textContent = "Stop command sent."; log("dash", "Dashboard: STOP queued.");
+});
+$("returnBtn").addEventListener("click", () => { robot.sweepQueue = []; server.queue("RETURN"); $("robotMsg").textContent = "Return command sent."; log("dash", "Dashboard: RETURN queued."); });
+$("sweepBtn").addEventListener("click", async () => {
+  const pts = db.points.map(p => p.index);
+  if (!robot.wifi) {
+    if (robot.busy) return;
+    log("warn", "No Wi-Fi: the robot switches to offline mode and visits every point in turn, buffering each reading.");
+    robot.busy = true;
+    for (const n of pts) { if (robot.stopRequested) break; await robot.visit(n); }
+    robot.stopRequested = false; robot.busy = false; setState("idle"); renderAll();
+    log("robot", `Offline sweep finished. ${robot.buffer.length} reading(s) waiting in the buffer; switch Wi-Fi on to send them.`);
+    return;
+  }
+  robot.sweepQueue = pts.slice(1);
+  sendGoto(pts[0]);
+  log("dash", `Sampling all ${pts.length} points in turn.`);
+});
+$("fieldCards").addEventListener("click", e => {
+  const g = e.target.closest("[data-go]"), w = e.target.closest("[data-water]");
+  if (g) sendGoto(g.dataset.go);
+  if (w) {
+    const n = Number(w.dataset.water);
+    if (soil[n]) soil[n].moisture = Math.min(80, soil[n].moisture + 28);
+    log("dash", `Farmer irrigated point ${n}. Sample it again to see the new moisture.`);
+    audit("IRRIGATED", `point ${n} (simulation)`);
+  }
+});
+$("wifiToggle").addEventListener("change", e => {
+  robot.wifi = e.target.checked;
+  $("wifiPill").textContent = robot.wifi ? "connected" : "disconnected";
+  $("wifiPill").className = "pill " + (robot.wifi ? "pill-on" : "pill-off");
+  log(robot.wifi ? "robot" : "warn", robot.wifi ? "Field Wi-Fi restored." : "Field Wi-Fi switched off: new readings will be buffered on the robot.");
+  if (!robot.busy) setState("idle");
+  renderField();
+});
+$("clearLog").addEventListener("click", () => $("stepLog").innerHTML = "");
+
+$("histPoint").addEventListener("change", renderHistory);
+$("histLimit").addEventListener("change", renderHistory);
+$("csvBtn").addEventListener("click", () => {
+  const q = v => `"${String(v).replace(/"/g, '""')}"`;
+  const lines = ["record_id,point,label,moisture_pct,temperature_c,status,recommendation,was_buffered,recorded_at"]
+    .concat(db.readings.slice().reverse().map(r => [r.id, r.point, q(pointLabel(r.point)), r.moisture, r.temperature, r.status, q(r.recommendation), r.buffered ? 1 : 0, new Date(r.time).toISOString()].join(",")));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+  a.download = "irrigation_readings.csv"; a.click();
+});
+
+$("pointsBody").addEventListener("click", e => {
+  const ed = e.target.closest("[data-edit]"), del = e.target.closest("[data-del]");
+  if (ed) {
+    const p = db.points.find(x => x.index === Number(ed.dataset.edit)); editing = p.index;
+    $("pIndex").value = p.index; $("pIndex").disabled = true; $("pLabel").value = p.label; $("pDist").value = p.distance;
+    $("pCrop").value = p.crop || ""; $("pNotes").value = p.notes || "";
+    $("pointFormTitle").textContent = `Edit point ${p.index}`; $("pointSave").textContent = "Save changes"; $("pointCancel").classList.remove("hidden");
+  }
+  if (del) {
+    const n = Number(del.dataset.del);
+    if (db.readings.some(r => r.point === n)) { $("pointMsg").textContent = "This point already has readings and cannot be deleted."; return; }
+    db.points = db.points.filter(p => p.index !== n); delete soil[n]; audit("POINT_DELETED", `point ${n}`); renderAll();
+  }
+});
+function resetPointForm() {
+  editing = null; $("pointForm").reset(); $("pIndex").disabled = false;
+  $("pointFormTitle").textContent = "Add a sampling point"; $("pointSave").textContent = "Add point"; $("pointCancel").classList.add("hidden");
+}
+$("pointCancel").addEventListener("click", resetPointForm);
+$("pointForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const idx = Number($("pIndex").value), label = $("pLabel").value.trim();
+  if (!label) return;
+  if (editing) {
+    Object.assign(db.points.find(p => p.index === editing), { label, distance: Number($("pDist").value || 0), crop: $("pCrop").value, notes: $("pNotes").value });
+    audit("POINT_UPDATED", `point ${editing}`); $("pointMsg").textContent = "Point updated.";
+  } else {
+    if (db.points.some(p => p.index === idx)) { $("pointMsg").textContent = "That point number already exists."; return; }
+    db.points.push({ index: idx, label, distance: Number($("pDist").value || 0), crop: $("pCrop").value, notes: $("pNotes").value });
+    db.points.sort((a, b) => a.index - b.index);
+    soil[idx] = { moisture: 30 + Math.random() * 30, dryRate: 0.8, temp: 30 };
+    audit("POINT_ADDED", `point ${idx} (${label})`); $("pointMsg").textContent = "Point added.";
+  }
+  resetPointForm(); renderAll();
+});
+
+$("thrForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const d = Number($("tDry").value), w = Number($("tWet").value), h = Number($("tHot").value);
+  if (!(d >= 0 && w <= 100 && d < w)) { $("thrMsg").textContent = "Dry limit must be lower than wet limit, both between 0 and 100%."; return; }
+  if (!(h >= 0 && h <= 60)) { $("thrMsg").textContent = "Temperature limit must be between 0 and 60 °C."; return; }
+  Object.assign(db.thresholds, { dryBelow: d, wetAbove: w, hotAbove: h });
+  audit("THRESHOLDS_CHANGED", `dry<${d} wet>${w} hot>${h}`);
+  $("thrMsg").textContent = "Thresholds saved. New readings will use them.";
+  document.activeElement.blur(); renderAll();
+});
+$("pwForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const u = session.user, np = $("pwNew").value;
+  if ($("pwCur").value !== u.password) { $("pwMsg").textContent = "Current password is not correct."; return; }
+  if (!(np.length >= 8 && /[A-Za-z]/.test(np) && /\d/.test(np))) { $("pwMsg").textContent = "New password must have at least 8 characters, with letters and numbers."; return; }
+  u.password = np; audit("PASSWORD_CHANGED", "own password"); $("pwMsg").textContent = "Password changed."; $("pwForm").reset();
+});
+$("userForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = $("uName").value.trim(), un = $("uUser").value.trim(), pw = $("uPass").value;
+  if (!/^[a-zA-Z0-9_.]{3,50}$/.test(un)) { $("userMsg").textContent = "Username: 3-50 letters, numbers, dot or underscore."; return; }
+  if (db.users.some(u => u.username === un)) { $("userMsg").textContent = "Username already taken."; return; }
+  if (!(pw.length >= 8 && /[A-Za-z]/.test(pw) && /\d/.test(pw))) { $("userMsg").textContent = "Password must have at least 8 characters, with letters and numbers."; return; }
+  db.users.push({ id: Date.now(), name, username: un, password: pw, role: $("uRole").value, active: true });
+  audit("USER_CREATED", `${un} (${$("uRole").value})`); $("userMsg").textContent = "Account created."; $("userForm").reset(); renderSettings();
+});
+$("usersBody").addEventListener("click", e => {
+  const b = e.target.closest("[data-toggle]"); if (!b) return;
+  const u = db.users.find(x => x.id === Number(b.dataset.toggle));
+  if (u === session.user) { $("userMsg").textContent = "You cannot disable your own account."; return; }
+  u.active = !u.active; audit(u.active ? "USER_ENABLED" : "USER_DISABLED", u.username); renderSettings();
+});
+
+// Dashboard auto-refresh every 5 seconds (like the real React dashboard).
+setInterval(() => { if (session.user) { renderHeader(); renderRobot(); if (!document.querySelector("#page-history.hidden")) renderHistory(); } }, 5000);
+
+/* ============================================================
+   8. STARTING DATA: one earlier visit to every point
+   ============================================================ */
+(function seed() {
+  const start = Date.now() - 3 * 60 * 60 * 1000;
+  db.points.forEach((p, i) => {
+    const s = soil[p.index], m = Math.round((s.moisture + 3) * 10) / 10, t = s.temp - 1.5;
+    const raw = Math.round(db.thresholds.adcDryRaw - (m / 100) * (db.thresholds.adcDryRaw - db.thresholds.adcWetRaw));
+    server.receiveReading({ point: p.index, moisture: m, temperature: t, raw, time: new Date(start + i * 9 * 60000) });
+  });
+  db.audit = [];
+})();
+})();
+</script>
+</body>
+</html>
