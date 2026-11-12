@@ -1,0 +1,33 @@
+# GitHub Codespaces / VS Code dev container:
+#   app = Node.js 20 workspace,  db = MySQL 8 database
+# The app container shares the database container's network, so the
+# API reaches MySQL at 127.0.0.1:3306.
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm
+    volumes:
+      - ../..:/workspaces:cached
+    command: sleep infinity
+    network_mode: service:db
+    environment:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_USER: irrigation
+      DB_PASSWORD: irrigation_pass
+      DB_NAME: irrigation_monitor
+      DEVICE_KEY: robot-01-demo-key
+      SESSION_SECRET: codespaces-dev-secret-change-me
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass_change_me
+      MYSQL_DATABASE: irrigation_monitor
+      MYSQL_USER: irrigation
+      MYSQL_PASSWORD: irrigation_pass
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+volumes:
+  mysql-data:
