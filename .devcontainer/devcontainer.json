@@ -1,0 +1,23 @@
+{
+  "name": "Mobile Robotic Irrigation Monitor",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "forwardPorts": [5173, 4000],
+  "portsAttributes": {
+    "5173": { "label": "Dashboard (React)", "onAutoForward": "openBrowser" },
+    "4000": { "label": "API (Express)", "onAutoForward": "silent" },
+    "3306": { "label": "MySQL", "onAutoForward": "ignore" }
+  },
+  "postCreateCommand": "npm run setup",
+  "postStartCommand": "npm run db:init",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "cweijan.vscode-mysql-client2"
+      ]
+    }
+  }
+}
